@@ -26,6 +26,8 @@ export const fetchNewsByCategory = async (
   page: number = 1
 ): Promise<ContentItem[]> => {
   try {
+    console.log(`[NewsAPI] Fetching ${category} news, page ${page}`);
+    
     const response = await axios.get<NewsAPIResponse>(`${NEWS_API_URL}/top-headlines`, {
       params: {
         apikey: NEWS_API_KEY,
@@ -36,10 +38,36 @@ export const fetchNewsByCategory = async (
       },
     });
 
+    console.log(`[NewsAPI] Successfully fetched ${response.data.articles?.length || 0} articles for ${category}`);
+    
+    if (!response.data.articles || response.data.articles.length === 0) {
+      console.warn(`[NewsAPI] No articles returned for category: ${category}`);
+      return [];
+    }
+
     return response.data.articles.map(article => transformNewsArticle(article, category));
-  } catch (error) {
-    console.error(`Error fetching news for category ${category}:`, error);
-    throw new Error(`Failed to fetch news for ${category}`);
+  } catch (error: any) {
+    // Enhanced error logging
+    if (axios.isAxiosError(error)) {
+      console.error(`[NewsAPI] Axios Error for ${category}:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
+      
+      // Check for rate limit (429) or other specific errors
+      if (error.response?.status === 429) {
+        console.error('[NewsAPI] ⚠️ RATE LIMIT EXCEEDED - You have hit the GNews API request limit (100/day on free tier)');
+      } else if (error.response?.status === 403) {
+        console.error('[NewsAPI] ⚠️ FORBIDDEN - Check your API key');
+      }
+    } else {
+      console.error(`[NewsAPI] Unknown error for ${category}:`, error);
+    }
+    
+    // Return empty array instead of throwing to prevent entire feed from failing
+    return [];
   }
 };
 
@@ -70,6 +98,8 @@ export const searchNews = async (query: string): Promise<ContentItem[]> => {
   }
 
   try {
+    console.log(`[NewsAPI] Searching for: "${query}"`);
+    
     const response = await axios.get<NewsAPIResponse>(`${NEWS_API_URL}/search`, {
       params: {
         apikey: NEWS_API_KEY,
@@ -80,16 +110,27 @@ export const searchNews = async (query: string): Promise<ContentItem[]> => {
       },
     });
 
-    return response.data.articles.map(article => transformNewsArticle(article));
-  } catch (error) {
-    console.error('Error searching news:', error);
-    throw new Error('Failed to search news');
+    console.log(`[NewsAPI] Search found ${response.data.articles?.length || 0} articles`);
+    return response.data.articles?.map(article => transformNewsArticle(article)) || [];
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      console.error('[NewsAPI] Search error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      if (error.response?.status === 429) {
+        console.error('[NewsAPI] ⚠️ RATE LIMIT EXCEEDED during search');
+      }
+    }
+    return [];
   }
 };
 
 // Fetch trending/top news
 export const fetchTrendingNews = async (): Promise<ContentItem[]> => {
   try {
+    console.log('[NewsAPI] Fetching trending news');
+    
     const response = await axios.get<NewsAPIResponse>(`${NEWS_API_URL}/top-headlines`, {
       params: {
         apikey: NEWS_API_KEY,
@@ -98,10 +139,19 @@ export const fetchTrendingNews = async (): Promise<ContentItem[]> => {
       },
     });
 
-    return response.data.articles.map(article => transformNewsArticle(article));
-  } catch (error) {
-    console.error('Error fetching trending news:', error);
-    throw new Error('Failed to fetch trending news');
+    console.log(`[NewsAPI] Trending: ${response.data.articles?.length || 0} articles`);
+    return response.data.articles?.map(article => transformNewsArticle(article)) || [];
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      console.error('[NewsAPI] Trending error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      if (error.response?.status === 429) {
+        console.error('[NewsAPI] ⚠️ RATE LIMIT EXCEEDED for trending');
+      }
+    }
+    return [];
   }
 };
 
