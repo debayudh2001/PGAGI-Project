@@ -1,6 +1,14 @@
 import axios from 'axios';
 import { NewsAPIResponse, NewsArticle, ContentItem, ContentType, NewsCategory } from '@/types/content';
-import { NEWS_API_URL, NEWS_API_KEY } from '@/lib/utils/constants';
+
+// Use local API route instead of calling GNews directly (fixes CORS)
+const API_BASE_URL = '/api/news';
+
+interface NewsAPIRouteResponse {
+  success: boolean;
+  articles?: NewsArticle[];
+  error?: string;
+}
 
 // Transform NewsAPI article to ContentItem
 const transformNewsArticle = (article: NewsArticle, category?: NewsCategory): ContentItem => {
@@ -28,23 +36,20 @@ export const fetchNewsByCategory = async (
   try {
     console.log(`[NewsAPI] Fetching ${category} news, page ${page}`);
     
-    const response = await axios.get<NewsAPIResponse>(`${NEWS_API_URL}/top-headlines`, {
+    const response = await axios.get<NewsAPIRouteResponse>(API_BASE_URL, {
       params: {
-        apikey: NEWS_API_KEY,
+        endpoint: 'top-headlines',
         category: category,
-        lang: 'en',
         page,
-        max: 10
       },
     });
 
-    console.log(`[NewsAPI] Successfully fetched ${response.data.articles?.length || 0} articles for ${category}`);
-    
-    if (!response.data.articles || response.data.articles.length === 0) {
+    if (!response.data.success || !response.data.articles) {
       console.warn(`[NewsAPI] No articles returned for category: ${category}`);
       return [];
     }
 
+    console.log(`[NewsAPI] Successfully fetched ${response.data.articles.length} articles for ${category}`);
     return response.data.articles.map(article => transformNewsArticle(article, category));
   } catch (error: any) {
     // Enhanced error logging
@@ -87,7 +92,7 @@ export const fetchNewsByCategories = async (
     return successfulResults;
   } catch (error) {
     console.error('Error fetching news by categories:', error);
-    throw new Error('Failed to fetch news');
+    return [];
   }
 };
 
@@ -100,18 +105,19 @@ export const searchNews = async (query: string): Promise<ContentItem[]> => {
   try {
     console.log(`[NewsAPI] Searching for: "${query}"`);
     
-    const response = await axios.get<NewsAPIResponse>(`${NEWS_API_URL}/search`, {
+    const response = await axios.get<NewsAPIRouteResponse>(API_BASE_URL, {
       params: {
-        apikey: NEWS_API_KEY,
+        endpoint: 'search',
         q: query,
-        lang: 'en',
-        sortBy: 'relevancy',
-        max: 10
       },
     });
 
-    console.log(`[NewsAPI] Search found ${response.data.articles?.length || 0} articles`);
-    return response.data.articles?.map(article => transformNewsArticle(article)) || [];
+    if (!response.data.success || !response.data.articles) {
+      return [];
+    }
+
+    console.log(`[NewsAPI] Search found ${response.data.articles.length} articles`);
+    return response.data.articles.map(article => transformNewsArticle(article));
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
       console.error('[NewsAPI] Search error:', {
@@ -131,16 +137,18 @@ export const fetchTrendingNews = async (): Promise<ContentItem[]> => {
   try {
     console.log('[NewsAPI] Fetching trending news');
     
-    const response = await axios.get<NewsAPIResponse>(`${NEWS_API_URL}/top-headlines`, {
+    const response = await axios.get<NewsAPIRouteResponse>(API_BASE_URL, {
       params: {
-        apikey: NEWS_API_KEY,
-        lang: 'en',
-        max: 10
+        endpoint: 'top-headlines',
       },
     });
 
-    console.log(`[NewsAPI] Trending: ${response.data.articles?.length || 0} articles`);
-    return response.data.articles?.map(article => transformNewsArticle(article)) || [];
+    if (!response.data.success || !response.data.articles) {
+      return [];
+    }
+
+    console.log(`[NewsAPI] Trending: ${response.data.articles.length} articles`);
+    return response.data.articles.map(article => transformNewsArticle(article));
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
       console.error('[NewsAPI] Trending error:', {
@@ -154,7 +162,3 @@ export const fetchTrendingNews = async (): Promise<ContentItem[]> => {
     return [];
   }
 };
-
-
-
-
