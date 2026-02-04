@@ -106,6 +106,18 @@ const userSlice = createSlice({
       state.preferences = DEFAULT_PREFERENCES;
       savePreferences(DEFAULT_PREFERENCES);
     },
+
+    // Set custom feed order
+    setFeedOrder: (state, action: PayloadAction<string[]>) => {
+      state.preferences.feedOrder = action.payload;
+      savePreferences(state.preferences);
+    },
+
+    // Reset feed order to default
+    resetFeedOrder: (state) => {
+      state.preferences.feedOrder = [];
+      savePreferences(state.preferences);
+    },
   },
 });
 
@@ -119,6 +131,8 @@ export const {
   removeFavorite,
   toggleFavorite,
   resetPreferences,
+  setFeedOrder,
+  resetFeedOrder,
 } = userSlice.actions;
 
 export default userSlice.reducer;

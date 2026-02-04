@@ -2,6 +2,7 @@
 
 import { ContentItem } from '@/types/content';
 import ContentCard from './ContentCard';
+import DraggableCard from './DraggableCard';
 
 interface ContentGridProps {
   items: ContentItem[];
@@ -9,6 +10,8 @@ interface ContentGridProps {
   error?: string | null;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  enableDragAndDrop?: boolean;
+  onReorder?: (reorderedItems: ContentItem[]) => void;
 }
 
 export default function ContentGrid({
@@ -17,7 +20,19 @@ export default function ContentGrid({
   error = null,
   onLoadMore,
   hasMore = false,
+  enableDragAndDrop = false,
+  onReorder,
 }: ContentGridProps) {
+  
+  const moveCard = (dragIndex: number, hoverIndex: number) => {
+    if (!onReorder) return;
+    
+    const newItems = [...items];
+    const [removed] = newItems.splice(dragIndex, 1);
+    newItems.splice(hoverIndex, 0, removed);
+    onReorder(newItems);
+  };
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-12 fade-in">
@@ -70,7 +85,16 @@ export default function ContentGrid({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.map((item, index) => (
           <div key={item.id} className="stagger-fade-in">
-            <ContentCard content={item} />
+            {enableDragAndDrop ? (
+              <DraggableCard 
+                content={item} 
+                index={index}
+                moveCard={moveCard}
+                isDraggingEnabled={true}
+              />
+            ) : (
+              <ContentCard content={item} />
+            )}
           </div>
         ))}
       </div>

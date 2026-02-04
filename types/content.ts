@@ -98,6 +98,7 @@ export interface UserPreferences {
   newsCategories: NewsCategory[];
   movieGenres: MovieGenre[];
   favorites: ContentItem[];  // Changed from favoriteIds: string[]
+  feedOrder?: string[];  // Custom order for personalized feed (array of content IDs)
 }
 
 // API Response Types

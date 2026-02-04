@@ -30,6 +30,7 @@ export const DEFAULT_PREFERENCES = {
   newsCategories: [NewsCategory.GENERAL, NewsCategory.TECHNOLOGY],
   movieGenres: [MovieGenre.ACTION, MovieGenre.DRAMA],
   favorites: [],  // Changed from favoriteIds
+  feedOrder: [],  // Custom feed order
 };
 
 // API Configuration
